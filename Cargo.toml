@@ -1,0 +1,19 @@
+[package]
+name = "jell_machine_server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.15", features = ["macros", "rt", "io-std"] }
+tokio-tungstenite = "0.17"
+futures = "0.3"
+futures-util = "0.3"
+futures-channel = "0.3"
+lazy_static = "1.4"
+clap = { version = "3.0", features = ["derive"] }
+async-channel = "1.6"
+crossterm = { version = "0.23", features = ["event-stream"] }
+ansi-cut = "0.2"
+rand = "0.8"
