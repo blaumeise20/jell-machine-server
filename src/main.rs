@@ -1,19 +1,21 @@
-#![feature(async_closure)]
-use std::{sync::Mutex, thread};
-use futures::SinkExt;
-use tokio::net::TcpListener;
-use lazy_static::lazy_static;
+use crate::{
+    grid::Grid,
+    server::{handle_connection, State},
+};
 use clap::Parser;
+use futures::SinkExt;
+use lazy_static::lazy_static;
+use std::{sync::Mutex, thread};
+use tokio::net::TcpListener;
 use tokio_tungstenite::tungstenite::Message;
-use crate::{grid::Grid, server::{handle_connection, State}};
 
 mod binary_io;
-mod messages;
 mod cellformat;
 mod grid;
-mod ui;
 mod log;
+mod messages;
 mod server;
+mod ui;
 
 // type State = (
 //     /*connected clients*/ Arc<Mutex<HashMap<SocketAddr, UnboundedSender<Message>>>>,
@@ -51,7 +53,9 @@ async fn main() {
     let args = Args::parse();
 
     let addr = format!("{}:{}", args.ip, args.port);
-    let listener = TcpListener::bind(&addr).await.expect("Error listening on socket");
+    let listener = TcpListener::bind(&addr)
+        .await
+        .expect("Error listening on socket");
 
     // io stuff
     let (log, commands) = ui::create_ui();
@@ -72,7 +76,6 @@ async fn main() {
         tokio::spawn(handle_connection(stream, addr, state.clone()));
     }
 }
-
 
 async fn execute_command(state: &State, command: &str) {
     let mut parts = command.split_whitespace().collect::<Vec<_>>();
