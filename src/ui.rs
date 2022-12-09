@@ -5,12 +5,12 @@ use async_channel::{Sender, Receiver};
 use crossterm::{terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, Clear, ClearType::CurrentLine, self, LeaveAlternateScreen}, execute, event::{EventStream, Event, KeyCode, KeyModifiers}, cursor, style::Print};
 use futures::{StreamExt, FutureExt, stream::select, future};
 
-use crate::log::{format_chat, format_log};
+use crate::{log::format_log, chat::ChatMessage};
 
-pub fn create_ui() -> (Sender<String>, Receiver<String>) {
+pub fn create_ui() -> (Sender<String>, Receiver<ChatMessage>) {
     let (ls, lr) = async_channel::bounded(10);
     let (is, ir) = async_channel::bounded(20);
-    let (cs, cr) = async_channel::bounded(20);
+    let (cs, cr) = async_channel::unbounded();
 
     // drawing
     tokio::spawn(async move {
@@ -28,7 +28,11 @@ pub fn create_ui() -> (Sender<String>, Receiver<String>) {
                     screen.log(msg);
                 },
                 ConsoleEvent::UserEvent(event) => {
-                    screen.handle_user_event(event);
+                    let mut message = None;
+                    screen.handle_user_event(event, &mut message);
+                    if let Some(message) = message {
+                        cs.try_send(ChatMessage { content: message, sender: "server".into() }).unwrap();
+                    }
                 },
             }
             future::ready(())
@@ -128,8 +132,7 @@ impl Screen {
         ).unwrap();
     }
 
-    fn handle_user_event(&mut self, event: Event) -> Option<String> {
-        let mut command = None;
+    fn handle_user_event(&mut self, event: Event, message: &mut Option<String>) {
         match event {
             Event::Key(key) => {
                 let modifiers = key.modifiers;
@@ -188,11 +191,9 @@ impl Screen {
                     KeyCode::Enter => {
                         if self.current_input.starts_with('/') {
                             self.log(format_log("94", "COMMAND", &self.current_input));
-                            command = Some(self.current_input.clone());
                         }
-                        else {
-                            self.log(format_chat("\x1b[3mserver\x1b[23m", &self.current_input));
-                        }
+                        *message = Some(self.current_input.clone());
+
 
                         self.current_input.clear();
                         self.position = 0;
@@ -215,7 +216,6 @@ impl Screen {
             }
             _ => {}
         }
-        command
     }
 }
 

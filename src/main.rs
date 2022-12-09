@@ -1,11 +1,9 @@
 #![feature(async_closure)]
-use std::{sync::Mutex, thread};
-use futures::SinkExt;
+use std::sync::Mutex;
 use tokio::net::TcpListener;
 use lazy_static::lazy_static;
 use clap::Parser;
-use tokio_tungstenite::tungstenite::Message;
-use crate::{grid::Grid, server::{handle_connection, State}};
+use crate::{grid::Grid, server::{handle_connection, State}, chat::handle_message};
 
 mod binary_io;
 mod messages;
@@ -14,6 +12,7 @@ mod grid;
 mod ui;
 mod log;
 mod server;
+mod chat;
 
 // type State = (
 //     /*connected clients*/ Arc<Mutex<HashMap<SocketAddr, UnboundedSender<Message>>>>,
@@ -54,45 +53,21 @@ async fn main() {
     let listener = TcpListener::bind(&addr).await.expect("Error listening on socket");
 
     // io stuff
-    let (log, commands) = ui::create_ui();
+    let (log, messages) = ui::create_ui();
 
     log!(log: "\x1b[33m[SERVER] Listening on \x1b[1m{}\x1b[0;33m.\x1b[0m", addr);
     let state = State::new(log);
 
-    // command handling
+    // chat messages
     let state1 = state.clone();
     tokio::spawn(async move {
-        while let Ok(command) = commands.recv().await {
-            execute_command(&state1, &command).await;
+        while let Ok(message) = messages.recv().await {
+            handle_message(&state1, message).await;
         }
     });
 
     // accept connections
     while let Ok((stream, addr)) = listener.accept().await {
         tokio::spawn(handle_connection(stream, addr, state.clone()));
-    }
-}
-
-
-async fn execute_command(state: &State, command: &str) {
-    let mut parts = command.split_whitespace().collect::<Vec<_>>();
-    let command = parts.remove(0)[1..].to_lowercase();
-    let command = command.as_str();
-    match command {
-        "kick" => {
-            // let id = parts[0];
-            // let lock = state.clients.lock().unwrap();
-            // let client = lock.iter_mut().find(|(_, c)| c.0 == id);
-            // match client {
-            //     Some((_, c)) => {
-            //         c.1.send(Message::Close(None)).await.unwrap();
-            //     }
-            //     None => {
-            //         let log = &state.log;
-            //         log!(log: "\x1b[31m[COMMAND] No client with id \x1b[1m{}\x1b[0;31m.\x1b[0m", id);
-            //     }
-            // }
-        }
-        _ => {}
     }
 }

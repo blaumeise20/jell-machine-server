@@ -7,13 +7,13 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.15", features = ["macros", "rt", "io-std"] }
-tokio-tungstenite = "0.17"
+tokio-tungstenite = "0.18"
 futures = "0.3"
 futures-util = "0.3"
 futures-channel = "0.3"
 lazy_static = "1.4"
-clap = { version = "3.0", features = ["derive"] }
+clap = { version = "4.0", features = ["derive"] }
 async-channel = "1.6"
-crossterm = { version = "0.23", features = ["event-stream"] }
+crossterm = { version = "0.25", features = ["event-stream"] }
 ansi-cut = "0.2"
 rand = "0.8"
